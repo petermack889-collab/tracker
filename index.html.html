@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Earnings Tracker</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background: #121212; 
+            margin: 0;
+            padding: 20px; /* Padding for desktop */
+            box-sizing: border-box;
+            color: #e0e0e0;
+            /* Prevent rubber-band scrolling on Mac/iOS */
+            overscroll-behavior: none;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* --- CARD STYLES --- */
+        .card { 
+            background: #1e1e1e; 
+            padding: 2rem; 
+            border-radius: 20px; /* Softer corners */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
+            text-align: center; 
+            width: 100%;
+            max-width: 380px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #333;
+        }
+
+        h1 { 
+            font-size: 3rem; 
+            margin: 5px 0; 
+            font-variant-numeric: tabular-nums; 
+            font-weight: 700;
+        }
+
+        .money-main { color: #2ecc71; text-shadow: 0 0 15px rgba(46, 204, 113, 0.2); }
+        .money-session { color: #f1c40f; text-shadow: 0 0 15px rgba(241, 196, 15, 0.2); }
+
+        .subtitle { 
+            color: #888; 
+            font-size: 0.85rem; 
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .clock-display { color: #666; font-size: 0.9rem; font-family: monospace; }
+
+        /* --- SHIFT INPUTS --- */
+        .shift-container {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+
+        .shift-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .shift-label { font-size: 0.8rem; color: #2ecc71; font-weight: bold; }
+        
+        .shift-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 8px; /* Slightly tighter gap for mobile */
+        }
+
+        /* Disabled State for Shift 2 */
+        .shift-wrapper.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(100%);
+        }
+
+        .input-col { display: flex; flex-direction: column; gap: 4px; }
+        .input-col label { font-size: 0.65rem; color: #666; text-align: left; }
+
+        input[type="time"], input[type="number"] {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 0 5px;
+            border-radius: 8px;
+            font-size: 16px; /* 16px prevents iOS zoom on focus */
+            outline: none;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+            height: 44px; /* Taller touch target */
+            line-height: 44px;
+            -webkit-appearance: none; /* Removes default iOS styling */
+            margin: 0;
+        }
+        input:focus { border-color: #2ecc71; background: #333; }
+
+        /* Toggle Checkbox Styling */
+        .toggle-label { font-size: 0.9rem; color: #888; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 5px;}
+        input[type="checkbox"] { accent-color: #2ecc71; cursor: pointer; width: 20px; height: 20px; }
+
+        /* --- BUTTONS --- */
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 25px; }
+        
+        button {
+            padding: 14px 24px; /* Larger tap area */
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+            transition: all 0.2s;
+            touch-action: manipulation; /* Removes double-tap delay */
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(1px); }
+
+        .btn-start { background-color: #27ae60; width: 100%; box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); }
+        .btn-stop { background-color: #c0392b; width: 100%; display: none; box-shadow: 0 4px 10px rgba(192, 57, 43, 0.3); }
+        .btn-reset { background-color: #4a4a4a; width: auto; }
+        
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.8rem;
+            color: #bbb;
+            margin-top: 10px;
+            background: #161616;
+            padding: 5px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+
+        /* --- PROGRESS BAR --- */
+        .progress-container {
+            margin-top: 15px;
+            width: 100%;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            height: 6px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #2ecc71;
+            transition: width 0.5s linear;
+        }
+        .progress-text { font-size: 0.7rem; color: #555; margin-top: 4px; }
+
+        /* --- MOBILE TWEAKS --- */
+        @media (max-width: 768px) {
+            body { 
+                padding: 10px; /* Less padding on phone screens */
+                align-items: flex-start; /* Start at top on mobile */
+                height: auto;
+                padding-top: 20px;
+                padding-bottom: 40px;
+            }
+            .container { flex-direction: column; }
+            .card { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div>
+                <p class="subtitle">Total Shift Earnings</p>
+                <h1 id="totalMoney" class="money-main">£0.00</h1>
+                <p id="clock" class="clock-display">--:--:--</p>
+            </div>
+
+            <div class="shift-container">
+                <div class="shift-wrapper">
+                    <div class="shift-header">
+                        <span class="shift-label">SHIFT 1</span>
+                    </div>
+                    <div class="shift-row">
+                        <div class="input-col"><label>Start</label><input type="time" id="s1_start" class="save-me"></div>
+                        <div class="input-col"><label>End</label><input type="time" id="s1_end" class="save-me"></div>
+                        <div class="input-col"><label>Rate</label><input type="number" id="s1_rate" class="save-me" step="0.01"></div>
+                    </div>
+                </div>
+
+                <div id="shift2_wrapper" class="shift-wrapper">
+                    <div class="shift-header" style="margin-top: 15px;">
+                        <span class="shift-label" style="color: #3498db;">SHIFT 2</span>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="s2_toggle" class="save-me" onchange="toggleShift2UI()"> Enable
+                        </label>
+                    </div>
+                    <div class="shift-row" id="s2_inputs">
+                        <div class="input-col"><label>Start</label><input type="time" id="s2_start" class="save-me"></div>
+                        <div class="input-col"><label>End</label><input type="time" id="s2_end" class="save-me"></div>
+                        <div class="input-col"><label>Rate</label><input type="number" id="s2_rate" class="save-me" step="0.01"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="progress-container">
+                    <div id="shiftProgress" class="progress-bar"></div>
+                </div>
+                <div class="progress-text" id="progressText">Shift Progress: 0%</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div>
+                <p class="subtitle">Break / Toilet Tracker</p>
+                <h1 id="sessionMoney" class="money-session">£0.00</h1>
+                <div id="sessionTimer" class="timer-display">00:00:00</div>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <label style="color:#888; font-size:0.8rem;">Rate for this session (£/hr)</label><br>
+                <input type="number" id="sessionRate" class="save-me" style="width: 100px; margin-top:5px; font-size: 1.1rem; color: #f1c40f; border-color: #555;">
+            </div>
+
+            <div class="btn-group">
+                <button id="btnStart" class="btn-start" onclick="toggleSession()">START</button>
+                <button id="btnStop" class="btn-stop" onclick="toggleSession()">STOP</button>
+                <button id="btnReset" class="btn-reset" onclick="resetSession()">✕</button>
+            </div>
+            
+            <button onclick="clearData()" style="background: transparent; color: #444; font-size: 0.7rem; margin-top: auto; padding: 5px;">Reset All Settings</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. LOCAL STORAGE & INITIALIZATION ---
+        const defaults = {
+            s1_start: "22:15", s1_end: "00:00", s1_rate: "73.38",
+            s2_toggle: false,
+            s2_start: "00:00", s2_end: "07:00", s2_rate: "85.00",
+            sessionRate: "73.38"
+        };
+
+        function loadSettings() {
+            document.querySelectorAll('.save-me').forEach(input => {
+                const saved = localStorage.getItem(input.id);
+                if (saved !== null) {
+                    if (input.type === 'checkbox') input.checked = (saved === 'true');
+                    else input.value = saved;
+                } else {
+                    if (defaults[input.id] !== undefined) {
+                        if (input.type === 'checkbox') input.checked = defaults[input.id];
+                        else input.value = defaults[input.id];
+                    }
+                }
+            });
+            toggleShift2UI();
+        }
+
+        document.querySelectorAll('.save-me').forEach(input => {
+            input.addEventListener('change', () => {
+                const val = input.type === 'checkbox' ? input.checked : input.value;
+                localStorage.setItem(input.id, val);
+                if(input.id === 's2_toggle') toggleShift2UI();
+                update();
+            });
+        });
+
+        function clearData() {
+            if(confirm("Reset all rates and times to default?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function toggleShift2UI() {
+            const isChecked = document.getElementById('s2_toggle').checked;
+            const row = document.getElementById('s2_inputs');
+            if(isChecked) {
+                row.classList.remove('disabled');
+            } else {
+                row.classList.add('disabled');
+            }
+        }
+
+        // --- 2. CALCULATIONS (Fixed for Overnight & Gap) ---
+        function getShiftData(startStr, endStr, rateVal) {
+            const now = new Date();
+            const ratePerSecond = (parseFloat(rateVal) || 0) / 3600;
+            
+            const [sH, sM] = startStr.split(':');
+            const [eH, eM] = endStr.split(':');
+
+            let start = new Date(); start.setHours(sH, sM, 0, 0);
+            let end = new Date(); end.setHours(eH, eM, 0, 0);
+
+            // LOGIC FOR OVERNIGHT SHIFTS (Start > End)
+            if (end <= start) {
+                if (now < end) {
+                    // Morning: shift started yesterday
+                    start.setDate(start.getDate() - 1);
+                }
+                else if (now >= start) {
+                    // Evening: shift ends tomorrow
+                    end.setDate(end.getDate() + 1);
+                }
+                else {
+                    // GAP: After End, Before Start. 
+                    // This means we are looking at the completed shift from last night.
+                    start.setDate(start.getDate() - 1);
+                }
+            } 
+
+            // Calculate Earnings
+            let earnings = 0;
+            let duration = (end - start) / 1000;
+            let elapsed = 0;
+
+            if (now >= start) {
+                let calcTime = (now > end) ? end : now; // Cap at end
+                elapsed = (calcTime - start) / 1000;
+                if (elapsed < 0) elapsed = 0;
+                earnings = elapsed * ratePerSecond;
+            }
+
+            return { earnings, elapsed, duration };
+        }
+
+        // --- 3. SESSION LOGIC ---
+        let sessionActive = false;
+        let sessionLastTime = null;
+        let sessionTotalSeconds = 0;
+
+        function update() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+
+            // Shift 1
+            const s1 = getShiftData(
+                document.getElementById('s1_start').value,
+                document.getElementById('s1_end').value,
+                document.getElementById('s1_rate').value
+            );
+
+            // Shift 2
+            let s2 = { earnings: 0, elapsed: 0, duration: 0 };
+            if (document.getElementById('s2_toggle').checked) {
+                s2 = getShiftData(
+                    document.getElementById('s2_start').value,
+                    document.getElementById('s2_end').value,
+                    document.getElementById('s2_rate').value
+                );
+            }
+
+            const totalMoney = s1.earnings + s2.earnings;
+            const moneyString = '£' + totalMoney.toLocaleString('en-GB', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+            
+            document.getElementById('totalMoney').innerText = moneyString;
+            document.title = `${moneyString} - Tracker`;
+
+            // Progress Bar
+            const totalElapsed = s1.elapsed + s2.elapsed;
+            const totalDuration = s1.duration + (document.getElementById('s2_toggle').checked ? s2.duration : 0);
+            
+            let percent = 0;
+            if (totalDuration > 0) {
+                percent = (totalElapsed / totalDuration) * 100;
+                if (percent > 100) percent = 100;
+            }
+            document.getElementById('shiftProgress').style.width = percent + '%';
+            document.getElementById('progressText').innerText = `Shift Progress: ${Math.round(percent)}%`;
+
+            // Session
+            if (sessionActive) {
+                const nowTime = Date.now();
+                const diff = (nowTime - sessionLastTime) / 1000;
+                sessionTotalSeconds += diff;
+                sessionLastTime = nowTime;
+            }
+
+            const sessionRate = parseFloat(document.getElementById('sessionRate').value) || 0;
+            const sessionEarned = sessionTotalSeconds * (sessionRate / 3600);
+            
+            document.getElementById('sessionMoney').innerText = '£' + sessionEarned.toLocaleString('en-GB', {
+                minimumFractionDigits: 4, maximumFractionDigits: 4
+            });
+
+            const sec = Math.floor(sessionTotalSeconds);
+            const hh = Math.floor(sec / 3600).toString().padStart(2, '0');
+            const mm = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+            const ss = (sec % 60).toString().padStart(2, '0');
+            document.getElementById('sessionTimer').innerText = `${hh}:${mm}:${ss}`;
+        }
+
+        function toggleSession() {
+            if (!sessionActive) {
+                sessionActive = true;
+                sessionLastTime = Date.now();
+                document.getElementById('btnStart').style.display = 'none';
+                document.getElementById('btnStop').style.display = 'block';
+            } else {
+                sessionActive = false;
+                document.getElementById('btnStop').style.display = 'none';
+                document.getElementById('btnStart').style.display = 'block';
+                document.getElementById('btnStart').innerText = "RESUME";
+            }
+        }
+
+        function resetSession() {
+            sessionActive = false;
+            sessionTotalSeconds = 0;
+            document.getElementById('btnStart').style.display = 'block';
+            document.getElementById('btnStart').innerText = "START";
+            document.getElementById('btnStop').style.display = 'none';
+            document.getElementById('sessionMoney').innerText = '£0.0000';
+            document.getElementById('sessionTimer').innerText = '00:00:00';
+        }
+
+        loadSettings();
+        setInterval(update, 100);
+    </script>
+</body>
+</html>
